@@ -1,0 +1,53 @@
+# Messaging Tests
+
+Test sending messages and getting AI responses.
+
+## Variables
+@baseUrl = http://127.0.0.1:8000
+# Replace this with a real session ID from 02-sessions.http
+@sessionId = 682f9200-c856-436e-ad50-69b1b733048c
+
+### Send Simple Message
+POST {{baseUrl}}/sessions/{{sessionId}}/message
+Content-Type: application/json
+
+{
+  "content": "Hello! Please respond with exactly: 'Hello from lit-mux!'"
+}
+
+### Send Message with Specific Backend
+POST {{baseUrl}}/sessions/{{sessionId}}/message  
+Content-Type: application/json
+
+{
+  "content": "What is 2 + 2? Please answer briefly.",
+  "backend": "ollama"
+}
+
+### Send Follow-up Message (tests conversation context)
+POST {{baseUrl}}/sessions/{{sessionId}}/message
+Content-Type: application/json
+
+{
+  "content": "What was my previous question?"
+}
+
+### Get Message History
+GET {{baseUrl}}/sessions/{{sessionId}}/messages
+
+### Test Error Handling - Invalid Backend
+POST {{baseUrl}}/sessions/{{sessionId}}/message
+Content-Type: application/json
+
+{
+  "content": "This should fail",
+  "backend": "nonexistent_backend"
+}
+
+### Test Error Handling - Invalid Session ID
+POST {{baseUrl}}/sessions/invalid-session-id/message
+Content-Type: application/json
+
+{
+  "content": "This should fail with 404"
+}

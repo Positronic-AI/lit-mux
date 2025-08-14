@@ -1,0 +1,81 @@
+# Model Selection Tests
+
+Test per-session and per-message model selection with Ollama.
+
+## Variables
+@baseUrl = http://127.0.0.1:8000
+
+### Create Session with Specific Model (Per-Session)
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Session with llama3.1:8b",
+  "metadata": {
+    "ollama_model": "llama3.1:8b",
+    "purpose": "testing_per_session_model"
+  }
+}
+
+### Create Session with Different Model
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Session with codellama",
+  "metadata": {
+    "ollama_model": "codellama",
+    "purpose": "code_generation"
+  }
+}
+
+### Send Message Using Session's Default Model
+# Use session ID from above
+@sessionId = REPLACE_WITH_SESSION_ID
+POST {{baseUrl}}/sessions/{{sessionId}}/message
+Content-Type: application/json
+
+{
+  "content": "Hello! What model are you running on?"
+}
+
+### Send Message with Per-Message Model Override
+POST {{baseUrl}}/sessions/{{sessionId}}/message
+Content-Type: application/json
+
+{
+  "content": "Write a simple Python function to add two numbers.",
+  "model": "codellama"
+}
+
+### Send Message with Different Model Override
+POST {{baseUrl}}/sessions/{{sessionId}}/message
+Content-Type: application/json
+
+{
+  "content": "Explain what machine learning is in simple terms.",
+  "model": "llama3.1"
+}
+
+### Test Model Priority (per-message overrides per-session)
+POST {{baseUrl}}/sessions/{{sessionId}}/message
+Content-Type: application/json
+
+{
+  "content": "What programming language are you best at helping with?",
+  "model": "llama3.1:13b"
+}
+
+### Get Message History to See Model Usage
+GET {{baseUrl}}/sessions/{{sessionId}}/messages
+
+### Create Session Without Model (Uses Default)
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Default Model Session"
+}

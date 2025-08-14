@@ -1,0 +1,55 @@
+# Client Integration Examples
+
+Examples showing how various clients would integrate with lit-mux.
+
+## Variables
+@baseUrl = http://127.0.0.1:8000
+
+### Use Case: Skills Analysis Integration
+# 1. Create session for skills analysis
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Skills Analysis Session",
+  "metadata": {
+    "client": "example_client",
+    "purpose": "job_skills_matching",
+    "model": "llama3.1"
+  }
+}
+
+# 2. Analyze job posting
+POST {{baseUrl}}/sessions/REPLACE_WITH_SESSION_ID/message
+Content-Type: application/json
+
+{
+  "content": "Analyze this job posting and extract required skills:\n\nJob Title: Senior Python Developer\nRequirements:\n- 5+ years Python experience\n- FastAPI and Django knowledge\n- AWS cloud experience\n- PostgreSQL database skills\n- Git version control\n- Agile methodology experience\n\nPlease extract the technical skills as a JSON list."
+}
+
+### Use Case: Multi-AI Coordination
+# 1. Create multi-AI session
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Multi-AI Code Review",
+  "metadata": {
+    "client": "example_client",
+    "purpose": "code_review_coordination",
+    "project": "ai_control_station"
+  }
+}
+
+# 2. Broadcast code review request
+POST {{baseUrl}}/sessions/REPLACE_WITH_SESSION_ID/broadcast
+Content-Type: application/json
+
+{
+  "content": "Please review this Python function for security issues:\n\ndef process_user_input(user_data):\n    query = f\"SELECT * FROM users WHERE name = '{user_data['name']}'\"\n    return execute_query(query)\n\nWhat security vulnerabilities do you see?"
+}
+
+# 3. Get responses from all AIs
+GET {{baseUrl}}/sessions/REPLACE_WITH_SESSION_ID/messages

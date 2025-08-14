@@ -1,0 +1,40 @@
+# Broadcasting Tests (Future Multi-AI)
+
+Test broadcasting messages to multiple AI backends.
+Note: Currently only works with ollama, but demonstrates the API for future multi-AI support.
+
+## Variables
+@baseUrl = http://127.0.0.1:8000
+@sessionId = REPLACE_WITH_SESSION_ID
+
+### Broadcast to All Backends in Session
+POST {{baseUrl}}/sessions/{{sessionId}}/broadcast
+Content-Type: application/json
+
+{
+  "content": "Hello from broadcast! Each AI should respond with their name."
+}
+
+### Broadcast to Specific Backends
+POST {{baseUrl}}/sessions/{{sessionId}}/broadcast
+Content-Type: application/json
+
+{
+  "content": "What's the square root of 16?",
+  "backends": ["ollama"]
+}
+
+### Get All Responses After Broadcast
+GET {{baseUrl}}/sessions/{{sessionId}}/messages
+
+### Create Multi-Backend Session for Testing
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Broadcast Test Session",
+  "metadata": {
+    "purpose": "testing_broadcast_functionality"
+  }
+}

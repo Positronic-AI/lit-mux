@@ -1,0 +1,16 @@
+# LIT Mux API Tests
+
+Basic health and backend checks for lit-mux API.
+
+## Variables
+@baseUrl = http://127.0.0.1:8000
+
+### Health Check
+GET {{baseUrl}}/health
+
+### List Available Backends
+GET {{baseUrl}}/backends
+
+### Get Backend Status (detailed)
+GET {{baseUrl}}/backends
+Accept: application/json

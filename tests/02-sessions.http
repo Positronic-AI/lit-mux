@@ -1,0 +1,52 @@
+# Session Management Tests
+
+Test creating, listing, and managing sessions.
+
+## Variables  
+@baseUrl = http://127.0.0.1:8000
+
+### Create Session with Ollama
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Test Session",
+  "metadata": {
+    "test": true,
+    "created_by": "http_tests"
+  }
+}
+
+### Create Multi-Backend Session (for future when we have multiple backends)
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Multi-AI Session",
+  "metadata": {
+    "type": "multi_backend_test"
+  }
+}
+
+### List All Sessions
+GET {{baseUrl}}/sessions
+
+### Get Specific Session (replace with actual session ID from above)
+@sessionId = 682f9200-c856-436e-ad50-69b1b733048c
+GET {{baseUrl}}/sessions/{{sessionId}}
+
+### Delete Session (replace with actual session ID)
+# DELETE {{baseUrl}}/sessions/{{sessionId}}
+
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama"],
+  "name": "Code Session",
+  "metadata": {
+    "ollama_model": "mistral-nemo:12b"
+  }
+}

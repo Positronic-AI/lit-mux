@@ -1,0 +1,72 @@
+# Edge Cases and Error Handling Tests
+
+Test error conditions and edge cases.
+
+## Variables
+@baseUrl = http://127.0.0.1:8000
+
+### Test Creating Session with Invalid Backend
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["nonexistent_backend"],
+  "name": "Should Fail"
+}
+
+### Test Creating Session with Empty Backends
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": [],
+  "name": "Empty Backends"
+}
+
+### Test Creating Session with Mixed Valid/Invalid Backends
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{
+  "backends": ["ollama", "fake_backend"],
+  "name": "Mixed Backends"
+}
+
+### Test Very Long Message
+POST {{baseUrl}}/sessions/REPLACE_WITH_VALID_SESSION_ID/message
+Content-Type: application/json
+
+{
+  "content": "This is a very long message that tests how the system handles large inputs. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Please respond briefly acknowledging you received this long message."
+}
+
+### Test Empty Message
+POST {{baseUrl}}/sessions/REPLACE_WITH_VALID_SESSION_ID/message
+Content-Type: application/json
+
+{
+  "content": ""
+}
+
+### Test Message with Special Characters
+POST {{baseUrl}}/sessions/REPLACE_WITH_VALID_SESSION_ID/message
+Content-Type: application/json
+
+{
+  "content": "Test special chars: !@#$%^&*(){}[]|\\:;\"'<>,.?/~`±§ and emojis: 🚀🎉✅❌🤖"
+}
+
+### Test Malformed JSON
+POST {{baseUrl}}/sessions/REPLACE_WITH_VALID_SESSION_ID/message
+Content-Type: application/json
+
+{
+  "content": "This should work",
+  "invalid_field": 
+}
+
+### Test Invalid Session ID Format
+GET {{baseUrl}}/sessions/not-a-uuid
+
+### Test Deleting Non-existent Session
+DELETE {{baseUrl}}/sessions/00000000-0000-0000-0000-000000000000
