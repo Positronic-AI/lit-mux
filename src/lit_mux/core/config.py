@@ -14,6 +14,7 @@ class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8000
     log_level: str = "info"
+    api_key: Optional[str] = None
 
 
 @dataclass
@@ -78,7 +79,8 @@ def create_default_config(config_file: Path) -> None:
         "server": {
             "host": "127.0.0.1",
             "port": 8000,
-            "log_level": "info"
+            "log_level": "info",
+            "api_key": "change-this"
         },
         "backends": {
             "ollama": {

@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 # Try to import system-prompt-composer
 try:
     import system_prompt_composer
-    SYSTEM_PROMPT_COMPOSER_AVAILABLE = True
-    logger.info("✅ system-prompt-composer loaded - enhanced prompts enabled")
+    SYSTEM_PROMPT_COMPOSER_AVAILABLE = False  # DISABLED: Causing tool naming issues
+    logger.info("🚫 system-prompt-composer disabled - using fallback prompts")
 except ImportError as e:
     SYSTEM_PROMPT_COMPOSER_AVAILABLE = False
     logger.warning("📦 system-prompt-composer not available - using basic prompts")

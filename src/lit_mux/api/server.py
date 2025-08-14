@@ -3,7 +3,7 @@ FastAPI REST API server for lit-mux.
 Includes MCP tool integration and enhanced AI capabilities.
 """
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -69,6 +69,9 @@ class LitMuxAPI:
     """FastAPI application for lit-mux."""
     
     def __init__(self):
+        from ..core.config import load_config
+        self.config = load_config()
+        
         self.app = FastAPI(
             title="LIT Mux API",
             description="Multi-AI multiplexer REST API with MCP tool integration",
@@ -95,6 +98,16 @@ class LitMuxAPI:
         # Setup routes
         self._setup_routes()
     
+    def _check_auth(self, request: Request):
+        """Check API key authentication."""
+        if not self.config.server.api_key:
+            return True  # No auth required if no key configured
+            
+        api_key = request.headers.get("X-API-Key") or request.headers.get("Authorization", "").replace("Bearer ", "")
+        if api_key != self.config.server.api_key:
+            raise HTTPException(status_code=401, detail="Invalid or missing API key")
+        return True
+    
     async def initialize_mcp(self, server_configs: List[MCPServerConfig] = None):
         """Initialize MCP servers. Called by the main server setup."""
         if server_configs:
@@ -115,7 +128,7 @@ class LitMuxAPI:
             return {"status": "healthy", "timestamp": datetime.now()}
         
         @self.app.post("/sessions", response_model=SessionResponse)
-        async def create_session(request: CreateSessionRequest):
+        async def create_session(request: CreateSessionRequest, auth=Depends(self._check_auth)):
             """Create a new AI session."""
             # Validate backends exist
             available_backends = self.message_router.list_backends()
@@ -205,7 +218,7 @@ class LitMuxAPI:
             ]
         
         @self.app.post("/sessions/{session_id}/message", response_model=MessageResponse)
-        async def send_message(session_id: str, request: SendMessageRequest):
+        async def send_message(session_id: str, request: SendMessageRequest, auth=Depends(self._check_auth)):
             """Send a message to a session with optional tool support."""
             session = await self.session_manager.get_session(session_id)
             if not session:
@@ -324,7 +337,7 @@ class LitMuxAPI:
             )
         
         @self.app.post("/sessions/{session_id}/broadcast")
-        async def broadcast_message(session_id: str, request: BroadcastMessageRequest):
+        async def broadcast_message(session_id: str, request: BroadcastMessageRequest, auth=Depends(self._check_auth)):
             """Broadcast message to multiple backends."""
             session = await self.session_manager.get_session(session_id)
             if not session:
@@ -413,7 +426,7 @@ class LitMuxAPI:
             return await self.mcp_client.health_check()
         
         @self.app.post("/mcp/servers")
-        async def add_mcp_server(server_config: dict):
+        async def add_mcp_server(server_config: dict, auth=Depends(self._check_auth)):
             """Add an MCP server dynamically."""
             from ..services.mcp_client import MCPServerConfig
             
