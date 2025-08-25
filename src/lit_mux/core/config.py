@@ -8,6 +8,14 @@ from typing import Dict, Any, Optional, List
 import yaml
 import os
 
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # python-dotenv not installed, skip
+    pass
+
 
 @dataclass
 class ServerConfig:
@@ -80,7 +88,7 @@ def create_default_config(config_file: Path) -> None:
             "host": "127.0.0.1",
             "port": 8000,
             "log_level": "info",
-            "api_key": "change-this"
+            "api_key": "${LIT_MUX_API_KEY}"
         },
         "backends": {
             "ollama": {
@@ -112,7 +120,9 @@ def expand_env_vars(data: Any) -> Any:
         return [expand_env_vars(item) for item in data]
     elif isinstance(data, str) and data.startswith("${") and data.endswith("}"):
         env_var = data[2:-1]
-        return os.getenv(env_var, data)
+        env_value = os.getenv(env_var)
+        # Return None for missing environment variables instead of the template string
+        return env_value if env_value is not None else None
     else:
         return data
 

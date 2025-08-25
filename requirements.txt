@@ -18,6 +18,9 @@ click>=8.1.0
 rich>=13.0.0
 toml>=0.10.2
 
+# Environment management
+python-dotenv>=1.0.0
+
 # Optional AI backend dependencies
 # Uncomment as needed for your specific use case:
 

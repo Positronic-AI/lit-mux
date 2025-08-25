@@ -156,7 +156,7 @@ class LitMuxAPI:
             )
         
         @self.app.get("/sessions", response_model=List[SessionResponse])
-        async def list_sessions():
+        async def list_sessions(auth=Depends(self._check_auth)):
             """List all sessions."""
             sessions = await self.session_manager.list_sessions()
             return [
@@ -173,7 +173,7 @@ class LitMuxAPI:
             ]
         
         @self.app.get("/sessions/{session_id}", response_model=SessionResponse)
-        async def get_session(session_id: str):
+        async def get_session(session_id: str, auth=Depends(self._check_auth)):
             """Get session details."""
             session = await self.session_manager.get_session(session_id)
             if not session:
@@ -190,7 +190,7 @@ class LitMuxAPI:
             )
         
         @self.app.delete("/sessions/{session_id}")
-        async def delete_session(session_id: str):
+        async def delete_session(session_id: str, auth=Depends(self._check_auth)):
             """Delete a session."""
             success = await self.session_manager.delete_session(session_id)
             if not success:
@@ -198,7 +198,7 @@ class LitMuxAPI:
             return {"message": "Session deleted"}
         
         @self.app.get("/sessions/{session_id}/messages", response_model=List[MessageResponse])
-        async def get_session_messages(session_id: str):
+        async def get_session_messages(session_id: str, auth=Depends(self._check_auth)):
             """Get all messages from a session."""
             session = await self.session_manager.get_session(session_id)
             if not session:
@@ -389,7 +389,7 @@ class LitMuxAPI:
             return {"responses": results}
         
         @self.app.get("/backends", response_model=List[BackendStatus])
-        async def list_backends():
+        async def list_backends(auth=Depends(self._check_auth)):
             """List all available backends."""
             backend_names = self.message_router.list_backends()
             health_status = await self.message_router.health_check_all()
@@ -404,7 +404,7 @@ class LitMuxAPI:
             ]
         
         @self.app.get("/tools")
-        async def list_mcp_tools():
+        async def list_mcp_tools(auth=Depends(self._check_auth)):
             """List all available MCP tools."""
             tools = self.mcp_client.get_available_tools()
             return {
@@ -421,7 +421,7 @@ class LitMuxAPI:
             }
         
         @self.app.get("/mcp/health")
-        async def mcp_health_check():
+        async def mcp_health_check(auth=Depends(self._check_auth)):
             """Check MCP server health status and clean up dead servers."""
             health_info = await self.mcp_client.health_check()
             
@@ -480,7 +480,7 @@ class LitMuxAPI:
                 raise HTTPException(status_code=404, detail=f"MCP server {server_name} not found or removal failed")
         
         @self.app.get("/models")
-        async def list_models():
+        async def list_models(auth=Depends(self._check_auth)):
             """Get available models from all backends."""
             models = {}
             
