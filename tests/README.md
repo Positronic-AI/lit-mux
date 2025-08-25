@@ -1,8 +1,18 @@
-# LIT Mux HTTP Tests
+# LIT Mux Tests
 
-This directory contains HTTP test files for the lit-mux REST API.
+This directory contains all test files for the lit-mux project.
+
+## Directory Structure
+
+- **HTTP API Tests** (current directory) - HTTP test files for the REST API
+- **integration/** - End-to-end integration tests
+- **performance/** - Performance, load, and memory leak tests
+
+## HTTP API Test Files
 
 ## Test Files
+
+### HTTP API Tests (current directory)
 
 1. **01-health.http** - Basic health checks and backend discovery
 2. **02-sessions.http** - Session creation, listing, and management
@@ -10,6 +20,17 @@ This directory contains HTTP test files for the lit-mux REST API.
 4. **04-broadcast.http** - Multi-AI broadcasting (future feature)
 5. **05-edge-cases.http** - Error handling and edge cases
 6. **06-client-examples.http** - Real-world client integration examples
+7. **07-model-selection.http** - Model selection and backend switching
+
+### Integration Tests
+
+- **integration/test_client.py** - Interactive test client for comprehensive API testing
+
+### Performance Tests
+
+- **performance/stress_test_mcp.py** - MCP stress testing
+- **performance/test_leak_fix.py** - Memory leak fix verification
+- **performance/test_leak_simple.py** - Simple memory leak test
 
 ## How to Run Tests
 
