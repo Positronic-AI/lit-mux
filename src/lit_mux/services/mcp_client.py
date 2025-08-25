@@ -38,18 +38,26 @@ class MCPServerProcess:
     async def start(self) -> bool:
         """Start the MCP server process."""
         try:
+            # Clean up any existing process first
+            if self.process:
+                await self.stop()
+                
             # Prepare environment
             env = os.environ.copy()
             env.update(self.config.env)
             
-            # Start the process
+            # Start the process with proper file descriptor management
             self.process = subprocess.Popen(
                 [self.config.command] + self.config.args,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=env,
-                text=True
+                text=True,
+                # Close file descriptors on exec to prevent leaks
+                close_fds=True,
+                # Set process group to allow clean termination
+                preexec_fn=os.setsid if hasattr(os, 'setsid') else None
             )
             
             # Give it a moment to start
@@ -62,10 +70,12 @@ class MCPServerProcess:
                 return True
             else:
                 logger.error(f"MCP server {self.config.name} failed to start")
+                await self._cleanup_process()
                 return False
                 
         except Exception as e:
             logger.error(f"Failed to start MCP server {self.config.name}: {e}")
+            await self._cleanup_process()
             return False
     
     async def stop(self) -> None:
@@ -84,15 +94,44 @@ class MCPServerProcess:
                 except asyncio.TimeoutError:
                     # Force kill if it doesn't shut down gracefully
                     logger.warning(f"MCP server {self.config.name} didn't terminate gracefully, force killing")
-                    self.process.kill()
-                    # Don't wait after kill - just mark as stopped
+                    if hasattr(os, 'killpg') and self.process.pid:
+                        try:
+                            # Kill the entire process group
+                            os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                        except (OSError, ProcessLookupError):
+                            # Fallback to regular kill
+                            self.process.kill()
+                    else:
+                        self.process.kill()
                 
-                self.is_running = False
+                await self._cleanup_process()
                 logger.info(f"Stopped MCP server: {self.config.name}")
                 
             except Exception as e:
                 logger.error(f"Error stopping MCP server {self.config.name}: {e}")
-                # Force mark as stopped even if there was an error
+                # Force cleanup even if there was an error
+                await self._cleanup_process()
+    
+    async def _cleanup_process(self) -> None:
+        """Clean up process and file descriptors."""
+        if self.process:
+            try:
+                # Close stdin/stdout/stderr to free file descriptors
+                if self.process.stdin:
+                    self.process.stdin.close()
+                if self.process.stdout:
+                    self.process.stdout.close()
+                if self.process.stderr:
+                    self.process.stderr.close()
+                    
+                # Wait for process cleanup
+                if self.process.poll() is None:
+                    self.process.wait()
+                    
+            except Exception as e:
+                logger.warning(f"Error during process cleanup for {self.config.name}: {e}")
+            finally:
+                self.process = None
                 self.is_running = False
     
     async def _wait_for_process(self) -> None:
@@ -105,6 +144,13 @@ class MCPServerProcess:
         """Send a JSON-RPC request to the MCP server."""
         if not self.is_running or not self.process:
             logger.warning(f"Cannot send request to {self.config.name}: server not running")
+            return None
+        
+        # Check if process is still alive
+        if self.process.poll() is not None:
+            logger.warning(f"Process for {self.config.name} has died, marking as stopped")
+            self.is_running = False
+            await self._cleanup_process()
             return None
         
         try:
@@ -124,14 +170,19 @@ class MCPServerProcess:
             logger.debug(f"📥 Response from {self.config.name}: {response}")
             return response
             
+        except (BrokenPipeError, OSError) as e:
+            logger.warning(f"Broken pipe/connection to {self.config.name}: {e}")
+            self.is_running = False
+            await self._cleanup_process()
+            return None
         except asyncio.TimeoutError:
             logger.warning(f"MCP server {self.config.name} request timeout after {self.config.timeout}s")
+            return None
         except Exception as e:
             logger.error(f"MCP request error for {self.config.name}: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-        
-        return None
+            return None
     
     async def _read_response(self, request_id: Optional[int]) -> Optional[Dict[str, Any]]:
         """Read response from MCP server, filtering out notifications."""
@@ -195,6 +246,14 @@ class MCPClient:
         self.servers: Dict[str, MCPServerProcess] = {}
         self.tools: Dict[str, MCPTool] = {}
         self.request_id = 0
+        # Statistics for monitoring
+        self.stats = {
+            "servers_created": 0,
+            "servers_failed": 0,
+            "servers_removed": 0,
+            "total_requests": 0,
+            "failed_requests": 0
+        }
     
     def _get_next_request_id(self) -> int:
         """Get the next request ID."""
@@ -203,6 +262,13 @@ class MCPClient:
         
     async def add_server(self, config: MCPServerConfig) -> bool:
         """Add and start an MCP server."""
+        self.stats["servers_created"] += 1
+        
+        # Check if server already exists
+        if config.name in self.servers:
+            logger.warning(f"MCP server {config.name} already exists, stopping existing one")
+            await self.remove_server(config.name)
+            
         server = MCPServerProcess(config)
         if await server.start():
             self.servers[config.name] = server
@@ -210,14 +276,20 @@ class MCPClient:
             # Initialize the MCP server with proper handshake
             if await self._initialize_server(server):
                 await self._discover_tools(config.name)
+                logger.info(f"Successfully added MCP server {config.name}")
                 return True
             else:
-                # Remove server if initialization failed
+                # Clean up server if initialization failed
+                logger.error(f"Failed to initialize server {config.name}, cleaning up")
+                self.stats["servers_failed"] += 1
                 await server.stop()
                 if config.name in self.servers:
                     del self.servers[config.name]
                 return False
-        return False
+        else:
+            logger.error(f"Failed to start server {config.name}")
+            self.stats["servers_failed"] += 1
+            return False
         
     async def _initialize_server(self, server: MCPServerProcess) -> bool:
         """Initialize MCP server with proper handshake."""
@@ -324,12 +396,46 @@ class MCPClient:
     
     async def shutdown(self) -> None:
         """Shutdown all MCP servers."""
-        for server in self.servers.values():
-            await server.stop()
+        logger.info("Shutting down all MCP servers")
+        
+        # Create a list of servers to shutdown to avoid modifying dict during iteration
+        servers_to_shutdown = list(self.servers.items())
+        
+        for server_name, server in servers_to_shutdown:
+            try:
+                await server.stop()
+            except Exception as e:
+                logger.error(f"Error shutting down server {server_name}: {e}")
         
         self.servers.clear()
         self.tools.clear()
         logger.info("Shut down all MCP servers")
+    
+    async def remove_server(self, server_name: str) -> bool:
+        """Remove a specific MCP server."""
+        if server_name not in self.servers:
+            logger.warning(f"Server {server_name} not found")
+            return False
+        
+        server = self.servers[server_name]
+        
+        try:
+            await server.stop()
+            del self.servers[server_name]
+            
+            # Remove tools from this server
+            tools_to_remove = [tool_key for tool_key, tool in self.tools.items() 
+                             if tool.server_name == server_name]
+            for tool_key in tools_to_remove:
+                del self.tools[tool_key]
+            
+            self.stats["servers_removed"] += 1
+            logger.info(f"Removed MCP server {server_name} and {len(tools_to_remove)} tools")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error removing server {server_name}: {e}")
+            return False
         
     async def force_shutdown(self) -> None:
         """Force immediate shutdown of all MCP servers without waiting."""
@@ -397,13 +503,24 @@ class MCPClient:
         """Get health status of all MCP servers."""
         health_info = {
             "servers": {},
-            "total_tools": len(self.tools)
+            "total_tools": len(self.tools),
+            "statistics": self.stats.copy()
         }
         
         for server_name, server in self.servers.items():
+            # Check if process is actually running
+            process_alive = server.process and server.process.poll() is None
+            
             health_info["servers"][server_name] = {
-                "running": server.is_running,
-                "tools": len(self.get_tools_by_server(server_name))
+                "running": server.is_running and process_alive,
+                "process_alive": process_alive,
+                "tools": len(self.get_tools_by_server(server_name)),
+                "pid": server.process.pid if server.process else None
             }
+            
+            # Update server status if process died
+            if server.is_running and not process_alive:
+                logger.warning(f"Detected dead process for server {server_name}")
+                server.is_running = False
         
         return health_info

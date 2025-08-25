@@ -60,7 +60,16 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup MCP servers on shutdown."""
-    await app_instance.shutdown_mcp()
+    logger.info("Application shutting down, cleaning up MCP servers")
+    try:
+        await app_instance.shutdown_mcp()
+    except Exception as e:
+        logger.error(f"Error during MCP shutdown: {e}")
+        # Force shutdown if graceful fails
+        try:
+            await app_instance.mcp_client.force_shutdown()
+        except Exception as force_e:
+            logger.error(f"Error during force shutdown: {force_e}")
 
 
 def main():
