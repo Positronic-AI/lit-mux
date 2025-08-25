@@ -1,0 +1,42 @@
+# Core dependencies for lit-mux
+# Multi-AI multiplexer with REST API
+
+# Web framework and server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Data validation and serialization
+pydantic>=2.0.0
+
+# HTTP client and file handling
+requests>=2.31.0
+aiofiles>=23.0.0
+python-multipart>=0.0.6
+
+# CLI and utilities
+click>=8.1.0
+rich>=13.0.0
+toml>=0.10.2
+
+# Optional AI backend dependencies
+# Uncomment as needed for your specific use case:
+
+# For OpenAI integration:
+# openai>=1.3.0
+
+# For Ollama integration:
+# ollama>=0.1.0
+
+# For Claude integration (Selenium-based):
+# selenium>=4.15.0
+# webdriver-manager>=4.0.0
+
+# Development dependencies (optional)
+# Uncomment for development work:
+
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0
+# black>=23.0.0
+# isort>=5.12.0
+# mypy>=1.5.0
+# pre-commit>=3.4.0
