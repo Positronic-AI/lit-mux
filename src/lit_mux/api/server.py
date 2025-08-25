@@ -442,43 +442,6 @@ class LitMuxAPI:
             
             return health_info
         
-        @self.app.post("/mcp/servers")
-        async def add_mcp_server(server_config: dict, auth=Depends(self._check_auth)):
-            """Add an MCP server dynamically."""
-            from ..services.mcp_client import MCPServerConfig
-            
-            server_name = server_config.get("name")
-            if not server_name:
-                raise HTTPException(status_code=400, detail="Server name is required")
-            
-            # Check if server already exists
-            if server_name in self.mcp_client.servers:
-                logger.warning(f"Server {server_name} already exists, not adding duplicate")
-                return {"message": f"MCP server {server_name} already exists"}
-            
-            config = MCPServerConfig(
-                name=server_name,
-                command=server_config["command"],
-                args=server_config.get("args", []),
-                env=server_config.get("env", {}),
-                timeout=server_config.get("timeout", 30)
-            )
-            
-            success = await self.mcp_client.add_server(config)
-            if success:
-                return {"message": f"MCP server {config.name} added successfully"}
-            else:
-                raise HTTPException(status_code=500, detail=f"Failed to add MCP server {config.name}")
-        
-        @self.app.delete("/mcp/servers/{server_name}")
-        async def remove_mcp_server(server_name: str, auth=Depends(self._check_auth)):
-            """Remove an MCP server."""
-            success = await self.mcp_client.remove_server(server_name)
-            if success:
-                return {"message": f"MCP server {server_name} removed successfully"}
-            else:
-                raise HTTPException(status_code=404, detail=f"MCP server {server_name} not found or removal failed")
-        
         @self.app.get("/models")
         async def list_models(auth=Depends(self._check_auth)):
             """Get available models from all backends."""

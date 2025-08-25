@@ -156,9 +156,11 @@ def load_config() -> Config:
         claude_desktop=claude_config
     )
     
-    # Load MCP configuration
+    # Load MCP configuration from config file and environment variable
     mcp_data = data.get("mcp", {})
     mcp_servers = []
+    
+    # First, load servers from config file
     for server_data in mcp_data.get("servers", []):
         server_config_data = MCPServerConfigData(
             name=server_data["name"],
@@ -169,8 +171,30 @@ def load_config() -> Config:
         )
         mcp_servers.append(server_config_data)
     
+    # Then, load servers from MCP_SERVERS environment variable
+    mcp_servers_env = os.getenv("MCP_SERVERS")
+    if mcp_servers_env:
+        for server_config_str in mcp_servers_env.split(","):
+            parts = server_config_str.strip().split("::")
+            if len(parts) >= 3:
+                name = parts[0]
+                command = parts[1]
+                args = parts[2:]  # All remaining parts are arguments
+                
+                server_config_data = MCPServerConfigData(
+                    name=name,
+                    command=command,
+                    args=args,
+                    env={},
+                    timeout=30
+                )
+                mcp_servers.append(server_config_data)
+    
+    # Enable MCP if we have any servers configured
+    mcp_enabled = mcp_data.get("enabled", len(mcp_servers) > 0)
+    
     mcp_config = MCPConfig(
-        enabled=mcp_data.get("enabled", False),
+        enabled=mcp_enabled,
         servers=mcp_servers
     )
     
